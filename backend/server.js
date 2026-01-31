@@ -1,34 +1,129 @@
-require('dotenv').config(); // Load environment variables first
 const express = require('express');
 const cors = require('cors');
-const db = require('./db'); // Import our new database bridge
+const pool = require('./db');
+const bcrypt = require('bcrypt');
 
 const app = express();
-const PORT = process.env.PORT || 5001;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// 1. Basic Route (The one the frontend uses)
-app.get('/', (req, res) => {
-    res.send('Sovereign Retirement API is running!');
+// ------------------------------------
+// 📝 DEBUGGING TOOL (Log every request)
+// ------------------------------------
+app.use((req, res, next) => {
+    console.log(`📡 Request received: ${req.method} ${req.url}`);
+    next();
 });
 
-// 2. Database Test Route (New!)
-app.get('/test-db', async (req, res) => {
+// ------------------------------------
+// 👤 REGISTER ROUTE
+// ------------------------------------
+app.post('/register', async (req, res) => {
     try {
-        const result = await db.query('SELECT NOW()'); // Ask database for current time
-        res.json({ 
-            status: 'success', 
-            message: 'Database connection established!', 
-            time: result.rows[0].now 
-        });
+        console.log("📝 PROCESSING REGISTRATION:", req.body);
+
+        const { name, email, password } = req.body;
+        const age = req.body.age || 30;
+        const retirement_age = req.body.retirement_age || 60;
+        const monthly_expenses = req.body.monthly_expenses || 0;
+
+        // 1. Check User Existence
+        const userExists = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+        if (userExists.rows.length > 0) {
+            console.log("❌ Error: User already exists");
+            return res.status(401).json({ error: "User already exists!" }); // JSON Error
+        }
+
+        // 2. Hash Password
+        const salt = await bcrypt.genSalt(10);
+        const bcryptPassword = await bcrypt.hash(password, salt);
+
+        // 3. Insert User
+        console.log("...Inserting User into Database...");
+        const newUser = await pool.query(
+            "INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email",
+            [name, email, bcryptPassword]
+        );
+        const newUserId = newUser.rows[0].id;
+        console.log(`✅ User Created. ID: ${newUserId}`);
+
+        // 4. Insert Financials
+        console.log("...Inserting Financial Data...");
+        await pool.query(
+            "INSERT INTO financials (user_id, current_age, retirement_age, monthly_expenses, current_savings, monthly_contribution) VALUES ($1, $2, $3, $4, 0, 0)",
+            [newUserId, parseInt(age), parseInt(retirement_age), parseInt(monthly_expenses)]
+        );
+        console.log("✅ Financials Created.");
+
+        // 5. Success Response
+        res.json({ message: "Success", user: newUser.rows[0] });
+
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Database connection failed' });
+        console.error("🔥 SERVER CRASH:", err.message);
+        // 👇 THIS IS THE FIX: Send JSON error so frontend doesn't hang
+        res.status(500).json({ error: err.message }); 
     }
 });
 
+// ------------------------------------
+// 💰 FINANCIAL ROUTES
+// ------------------------------------
+app.get('/financials/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const result = await pool.query('SELECT * FROM financials WHERE user_id = $1', [userId]);
+        if (result.rows.length === 0) return res.json({}); 
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: "Server Error" });
+    }
+});
+
+app.post('/financials/update', async (req, res) => {
+    try {
+        const { user_id, current_savings, monthly_contribution, current_age, retirement_age, monthly_expenses } = req.body;
+        
+        // Upsert Logic
+        const check = await pool.query('SELECT * FROM financials WHERE user_id = $1', [user_id]);
+        if (check.rows.length === 0) {
+            await pool.query(
+                'INSERT INTO financials (user_id, current_savings, monthly_contribution, current_age, retirement_age, monthly_expenses) VALUES ($1, $2, $3, $4, $5, $6)',
+                [user_id, current_savings, monthly_contribution, current_age, retirement_age, monthly_expenses]
+            );
+        } else {
+            await pool.query(
+                'UPDATE financials SET current_savings = $2, monthly_contribution = $3, current_age = $4, retirement_age = $5, monthly_expenses = $6 WHERE user_id = $1',
+                [user_id, current_savings, monthly_contribution, current_age, retirement_age, monthly_expenses]
+            );
+        }
+        res.json({ message: "Updated Successfully" });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: "Server Error" });
+    }
+});
+
+// Login Route
+app.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const user = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+        if (user.rows.length === 0) return res.status(401).json({ error: "Incorrect details" });
+
+        const validPassword = await bcrypt.compare(password, user.rows[0].password);
+        if (!validPassword) return res.status(401).json({ error: "Incorrect details" });
+
+        res.json({ message: "Login Successful!", user: { id: user.rows[0].id, name: user.rows[0].name, email: user.rows[0].email } });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: "Server Error" });
+    }
+});
+
+const PORT = 5001;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });

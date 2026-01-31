@@ -1,14 +1,11 @@
-const { Pool } = require('pg');
-require('dotenv').config();
+const Pool = require('pg').Pool;
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  user: 'postgres',
+  password: 'admin123', // 👈 MAKE SURE THIS IS YOUR ACTUAL PASSWORD
+  host: 'localhost',
+  port: 5432,
+  database: 'sovereign_db'
 });
 
-pool.on('connect', () => {
-  console.log('✅ Connected to the Database!');
-});
-
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-};
+module.exports = pool;
