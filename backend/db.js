@@ -1,11 +1,10 @@
-const Pool = require('pg').Pool;
+// backend/db.js
+const { Pool } = require('pg');
+require('dotenv').config();
 
 const pool = new Pool({
-  user: 'postgres',
-  password: 'admin123', // 👈 MAKE SURE THIS IS YOUR ACTUAL PASSWORD
-  host: 'localhost',
-  port: 5432,
-  database: 'sovereign_db'
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 module.exports = pool;
