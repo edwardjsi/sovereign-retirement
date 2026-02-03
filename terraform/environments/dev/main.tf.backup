@@ -1,0 +1,57 @@
+# Sovereign Retirement System - AWS Infrastructure
+# Environment: Development
+# Region: ap-south-1 (Mumbai - closer to you in Tirunelveli)
+
+terraform {
+  required_version = ">= 1.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+
+  backend "local" {}
+}
+
+provider "aws" {
+  region = var.aws_region
+
+  default_tags {
+    tags = {
+      Project     = "Sovereign Retirement System"
+      Environment = "dev"
+      ManagedBy   = "Terraform"
+      Owner       = "Santosh"
+      Location    = "Tirunelveli"
+    }
+  }
+}
+
+# Test Resource: S3 Bucket
+resource "aws_s3_bucket" "terraform_test" {
+  bucket = "sovereign-retirement-test-${var.aws_account_id}"
+
+  tags = {
+    Name        = "Terraform Test Bucket"
+    Description = "Testing Terraform deployment"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "terraform_test" {
+  bucket = aws_s3_bucket.terraform_test.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "terraform_test" {
+  bucket = aws_s3_bucket.terraform_test.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
