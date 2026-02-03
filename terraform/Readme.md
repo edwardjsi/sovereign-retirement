@@ -1,340 +1,395 @@
-# 🏦 Sovereign Retirement Calculator
+Perfect! Here's a comprehensive README for the Terraform folder:
 
-A full-stack retirement planning application deployed on AWS using Infrastructure as Code, demonstrating modern cloud architecture, containerization, and DevOps practices.
+bash
+# Navigate to terraform directory
+cd /mnt/c/Users/edwar/sovereign-retirement/terraform
+
+# Create Terraform-specific README
+cat > README.md << 'EOF'
+# 🏗️ Terraform Infrastructure
+
+This directory contains Infrastructure as Code (IaC) for deploying the Sovereign Retirement Calculator on AWS.
 
 ## 📋 Table of Contents
 
 - [Overview](#overview)
-- [Features](#features)
 - [Architecture](#architecture)
-- [Technologies](#technologies)
-- [Infrastructure Components](#infrastructure-components)
-- [Project Structure](#project-structure)
-- [Local Development](#local-development)
-- [AWS Deployment](#aws-deployment)
-- [Cost Analysis](#cost-analysis)
-- [Security Best Practices](#security-best-practices)
-- [What I Learned](#what-i-learned)
-- [Future Improvements](#future-improvements)
+- [Directory Structure](#directory-structure)
+- [Modules](#modules)
+- [Environments](#environments)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Detailed Usage](#detailed-usage)
+- [Outputs](#outputs)
+- [Cost Estimation](#cost-estimation)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
 ## 🎯 Overview
 
-Sovereign Retirement Calculator is a web application that helps users plan their retirement by calculating future savings projections based on current age, retirement age, monthly savings, expected returns, and inflation rates.
+This Terraform configuration creates a complete AWS infrastructure for a full-stack web application with:
 
-**Built to demonstrate:**
-- Cloud architecture on AWS
-- Infrastructure as Code with Terraform
-- Container orchestration
-- Full-stack TypeScript development
-- Security best practices
+- **Networking**: Custom VPC with public and private subnets across 2 availability zones
+- **Database**: RDS PostgreSQL 15 in private subnets
+- **Security**: Security groups, IAM roles, Secrets Manager
+- **High Availability**: Multi-AZ setup for production readiness
 
----
-
-## ✨ Features
-
-### User Features
-- 🔐 User authentication and authorization
-- 💰 Retirement projection calculations
-- 📊 Multiple scenario planning
-- 💾 Secure data persistence
-- 📱 Responsive UI design
-
-### Technical Features
-- 🐳 Fully containerized with Docker
-- ☁️ Deployed on AWS with IaC
-- 🔒 Secure credential management
-- 🌐 Multi-AZ high availability
-- 📈 Scalable architecture
-- 💵 Cost-optimized infrastructure
+**Infrastructure deployment time**: ~10-15 minutes  
+**Destruction time**: ~5-10 minutes
 
 ---
 
 ## 🏗️ Architecture
 
-```
+┌─────────────────────────────────────────────────────────────┐
+│ AWS Cloud │
+│ ┌───────────────────────────────────────────────────────┐ │
+│ │ VPC (10.0.0.0/16) │ │
+│ │ │ │
+│ │ ┌──────────────────────┬──────────────────────────┐ │ │
+│ │ │ Availability Zone A │ Availability Zone B │ │ │
+│ │ │ │ │ │ │
+│ │ │ ┌────────────────┐ │ ┌────────────────┐ │ │ │
+│ │ │ │ Public Subnet │ │ │ Public Subnet │ │ │ │
+│ │ │ │ 10.0.1.0/24 │ │ │ 10.0.2.0/24 │ │ │ │
+│ │ │ │ │ │ │ │ │ │ │
+│ │ │ │ - NAT Gateway │ │ │ - ALB (future) │ │ │ │
+│ │ │ │ - IGW │ │ │ │ │ │ │
+│ │ │ └────────────────┘ │ └────────────────┘ │ │ │
+│ │ │ │ │ │ │
+│ │ │ ┌────────────────┐ │ ┌────────────────┐ │ │ │
+│ │ │ │ Private Subnet │ │ │ Private Subnet │ │ │ │
+│ │ │ │ 10.0.3.0/24 │ │ │ 10.0.4.0/24 │ │ │ │
+│ │ │ │ │ │ │ │ │ │ │
+│ │ │ │ - RDS Primary │ │ │ - ECS Tasks │ │ │ │
+│ │ │ │ │ │ │ │ │ │ │
+│ │ │ └────────────────┘ │ └────────────────┘ │ │ │
+│ │ └──────────────────────┴──────────────────────────┘ │ │
+│ └───────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
 
-                    Internet
-                       ↓
-              Application Load Balancer
-                       ↓
-        ┌──────────────┴──────────────┐
-        ↓                              ↓
-    Frontend Container            Backend Container
-(React + Vite)               (NestJS + TypeScript)
-Port: 3000                   Port: 3001
-└──────────────┬──────────────┘
-↓
-RDS PostgreSQL 15
-(Private Subnet)
-Port: 5432
+text
 
-```
+---
 
-### Network Architecture
+## 📁 Directory Structure
 
-```
-
-VPC (10.0.0.0/16)
-├── Availability Zone A (ap-south-1a)
-│   ├── Public Subnet (10.0.1.0/24)
-│   │   └── NAT Gateway
-│   └── Private Subnet (10.0.3.0/24)
-│       └── RDS Primary
+terraform/
+├── modules/ # Reusable Terraform modules
+│ ├── vpc/ # VPC networking module
+│ │ ├── main.tf # VPC, subnets, gateways, routes
+│ │ ├── variables.tf # Input variables
+│ │ └── outputs.tf # Exported values
+│ │
+│ └── rds/ # RDS database module
+│ ├── main.tf # RDS instance, security groups, secrets
+│ ├── variables.tf # Database configuration inputs
+│ └── outputs.tf # Database connection details
 │
-└── Availability Zone B (ap-south-1b)
-├── Public Subnet (10.0.2.0/24)
-│   └── Application Load Balancer
-└── Private Subnet (10.0.4.0/24)
-└── ECS Tasks
-
-```
-
----
-
-## 🛠️ Technologies
-
-### Frontend
-- **Framework**: React 18 + TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **State Management**: React Context API
-
-### Backend
-- **Framework**: NestJS + TypeScript
-- **ORM**: TypeORM
-- **Authentication**: JWT
-- **Validation**: class-validator
-
-### Database
-- **DBMS**: PostgreSQL 15.15
-- **Hosting**: AWS RDS (db.t3.micro)
-- **Backups**: Automated 7-day retention
-
-### Infrastructure
-- **Cloud Provider**: AWS
-- **IaC Tool**: Terraform 1.9+
-- **Container Runtime**: Docker + Docker Compose
-- **Container Registry**: AWS ECR (planned)
-- **Container Orchestration**: AWS ECS Fargate (planned)
-- **Load Balancer**: AWS Application Load Balancer (planned)
-
-### DevOps
-- **Version Control**: Git + GitHub
-- **CI/CD**: GitHub Actions (planned)
-- **Monitoring**: AWS CloudWatch
-
----
-
-## 🏛️ Infrastructure Components
-
-### Day 4: Networking & Database (COMPLETED ✅)
-
-#### VPC Module
-- **Custom VPC**: 10.0.0.0/16 CIDR block
-- **Public Subnets**: 2 subnets across 2 AZs (10.0.1.0/24, 10.0.2.0/24)
-- **Private Subnets**: 2 subnets across 2 AZs (10.0.3.0/24, 10.0.4.0/24)
-- **Internet Gateway**: Public internet access
-- **NAT Gateway**: Private subnet internet access (for updates)
-- **Route Tables**: Separate routing for public and private subnets
-
-#### RDS Module
-- **Engine**: PostgreSQL 15.15
-- **Instance Class**: db.t3.micro (2 vCPUs, 1 GB RAM)
-- **Storage**: 20 GB General Purpose SSD (gp3)
-- **Multi-AZ**: Configured subnet group across 2 AZs
-- **Backups**: Automated daily backups, 7-day retention
-- **Encryption**: At rest using AWS KMS
-- **Security**: Database in private subnets only
-
-#### Security Components
-- **Secrets Manager**: Database credentials stored securely
-- **Security Groups**: Restrictive rules (PostgreSQL port 5432 only from VPC)
-- **IAM Roles**: Enhanced RDS monitoring with CloudWatch
-- **Network ACLs**: Default VPC network access control
-
-### Day 5: Container Registry (PLANNED 🔄)
-- AWS ECR repositories for frontend and backend images
-- Image scanning for vulnerabilities
-- Lifecycle policies for image management
-
-### Day 6: Container Orchestration (PLANNED 🔄)
-- ECS Fargate cluster (serverless containers)
-- Task definitions for frontend and backend
-- ECS Services with auto-scaling
-- CloudWatch log groups for container logs
-
-### Day 7: Load Balancing (PLANNED 🔄)
-- Application Load Balancer in public subnets
-- Target groups for ECS tasks
-- Health checks and automatic failover
-- HTTPS/SSL configuration (optional)
-
----
-
-## 📁 Project Structure
-
-```
-
-sovereign-retirement/
-├── frontend/                    \# React frontend application
-│   ├── src/
-│   │   ├── components/         \# Reusable UI components
-│   │   ├── pages/              \# Page components
-│   │   ├── contexts/           \# React contexts (auth, etc.)
-│   │   └── services/           \# API service layer
-│   ├── app/
-│   │   ├── dashboard/          \# Dashboard page
-│   │   ├── login/              \# Login page
-│   │   └── register/           \# Registration page
-│   ├── Dockerfile              \# Frontend container definition
-│   └── package.json
+├── environments/ # Environment-specific configurations
+│ └── dev/ # Development environment
+│ ├── main.tf # Main configuration (calls modules)
+│ ├── variables.tf # Environment variables
+│ ├── outputs.tf # Environment outputs
+│ ├── terraform.tf # Provider and backend config
+│ └── README.md # Environment-specific docs
 │
-├── backend/                     \# NestJS backend API
-│   ├── src/
-│   │   ├── auth/               \# Authentication module
-│   │   ├── users/              \# Users module
-│   │   ├── retirement/         \# Retirement calculations module
-│   │   └── database/           \# Database configuration
-│   ├── Dockerfile              \# Backend container definition
-│   └── package.json
-│
-├── terraform/                   \# Infrastructure as Code
-│   ├── modules/
-│   │   ├── vpc/                \# VPC networking module
-│   │   │   ├── main.tf         \# VPC resources
-│   │   │   ├── variables.tf    \# Input variables
-│   │   │   └── outputs.tf      \# Output values
-│   │   └── rds/                \# RDS database module
-│   │       ├── main.tf         \# RDS instance \& security
-│   │       ├── variables.tf    \# Database configuration
-│   │       └── outputs.tf      \# Connection details
-│   └── environments/
-│       └── dev/                \# Development environment
-│           ├── main.tf         \# Main configuration
-│           ├── variables.tf    \# Environment variables
-│           ├── outputs.tf      \# Stack outputs
-│           ├── terraform.tf    \# Terraform settings
-│           └── Readme.md       \# Environment documentation
-│
-├── docker-compose.yml           \# Local development orchestration
-├── .gitignore                   \# Git ignore patterns
-└── README.md                    \# This file
+└── README.md # This file
 
-```
+text
 
 ---
 
-## 💻 Local Development
+## 🧩 Modules
 
-### Prerequisites
-- Docker Desktop installed
-- Node.js 18+ (for local development without Docker)
-- Git
+### VPC Module (`modules/vpc/`)
 
-### Quick Start
+Creates networking infrastructure with:
 
-```bash
-# Clone the repository
-git clone https://github.com/YOUR-USERNAME/sovereign-retirement.git
-cd sovereign-retirement
+**Resources Created:**
+- 1 VPC (10.0.0.0/16)
+- 2 Public subnets (10.0.1.0/24, 10.0.2.0/24)
+- 2 Private subnets (10.0.3.0/24, 10.0.4.0/24)
+- 1 Internet Gateway
+- 1 NAT Gateway (in AZ A)
+- 2 Route tables (public and private)
+- Route table associations
 
-# Start all services with Docker Compose
-docker-compose up -d
+**Inputs:**
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `project_name` | string | - | Project name for resource naming |
+| `environment` | string | - | Environment (dev/staging/prod) |
+| `vpc_cidr` | string | `"10.0.0.0/16"` | VPC CIDR block |
+| `availability_zones` | list(string) | - | List of AZs to use |
+| `public_subnet_cidrs` | list(string) | - | Public subnet CIDR blocks |
+| `private_subnet_cidrs` | list(string) | - | Private subnet CIDR blocks |
 
-# View logs
-docker-compose logs -f
+**Outputs:**
+- `vpc_id` - VPC identifier
+- `public_subnet_ids` - List of public subnet IDs
+- `private_subnet_ids` - List of private subnet IDs
+- `nat_gateway_id` - NAT Gateway identifier
 
-# Access the application
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:3001
-# Database: localhost:5432
-```
+**Example Usage:**
+```hcl
+module "vpc" {
+  source = "../../modules/vpc"
 
+  project_name         = "sovereign-retirement"
+  environment          = "dev"
+  vpc_cidr            = "10.0.0.0/16"
+  availability_zones  = ["ap-south-1a", "ap-south-1b"]
+  public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+  private_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
+}
+RDS Module (modules/rds/)
+Creates managed PostgreSQL database with security.
 
-### Individual Service Commands
+Resources Created:
 
-```bash
-# Start only database
-docker-compose up -d postgres
+RDS PostgreSQL instance (db.t3.micro)
 
-# Start backend
-docker-compose up -d backend
+DB Subnet Group (spans 2 AZs)
 
-# Start frontend
-docker-compose up -d frontend
+Security Group (PostgreSQL port 5432)
 
-# Stop all services
-docker-compose down
+AWS Secrets Manager secret (credentials)
 
-# Rebuild containers after code changes
-docker-compose up -d --build
-```
+IAM role for enhanced monitoring
 
+CloudWatch log exports
 
-### Manual Setup (Without Docker)
+Inputs:
 
-```bash
-# Install dependencies
-cd frontend && npm install
-cd ../backend && npm install
+Variable	Type	Default	Description
+project_name	string	-	Project name
+environment	string	-	Environment name
+vpc_id	string	-	VPC ID where DB will run
+subnet_ids	list(string)	-	Private subnet IDs for DB
+database_name	string	-	Initial database name
+master_username	string	"postgres"	Master username
+instance_class	string	"db.t3.micro"	RDS instance type
+allocated_storage	number	20	Storage size in GB
+engine_version	string	"15.15"	PostgreSQL version
+backup_retention_period	number	7	Backup retention days
+multi_az	bool	false	Enable Multi-AZ
+Outputs:
 
-# Set up environment variables
-cp backend/.env.example backend/.env
-# Edit backend/.env with your database credentials
+db_instance_id - RDS instance identifier
 
-# Run database migrations
-cd backend
-npm run migration:run
+db_endpoint - Connection endpoint (host:port)
 
-# Start services
-npm run start:dev   # Backend (terminal 1)
-cd ../frontend
-npm run dev         # Frontend (terminal 2)
-```
+db_address - Database hostname
 
+db_port - Database port (5432)
 
----
+db_name - Database name
 
-## ☁️ AWS Deployment
+db_password_secret_arn - Secrets Manager ARN
 
-### Prerequisites
+db_security_group_id - Security group ID
 
-- AWS Account
-- AWS CLI configured (`aws configure`)
-- Terraform 1.9+ installed
-- Docker installed (for ECR push)
+Example Usage:
 
+text
+module "rds" {
+  source = "../../modules/rds"
 
-### Step 1: Deploy Infrastructure (Day 4 - COMPLETED)
+  project_name  = "sovereign-retirement"
+  environment   = "dev"
+  vpc_id        = module.vpc.vpc_id
+  subnet_ids    = module.vpc.private_subnet_ids
+  database_name = "sovereign_db"
+  
+  instance_class = "db.t3.micro"
+  allocated_storage = 20
+  engine_version = "15.15"
+}
+🌍 Environments
+Development (environments/dev/)
+Purpose: Development and testing environment
 
-```bash
-# Navigate to Terraform dev environment
+Configuration:
+
+Region: ap-south-1 (Mumbai)
+
+VPC CIDR: 10.0.0.0/16
+
+RDS Instance: db.t3.micro
+
+Multi-AZ: Disabled (cost optimization)
+
+Backup Retention: 7 days
+
+Monthly Cost: ~$47-50 if running 24/7
+
+NAT Gateway: $32
+
+RDS db.t3.micro: $15
+
+Recommended Usage: Destroy when not actively developing
+
+🚀 Prerequisites
+Required Tools
+Terraform: Version 1.9.0 or higher
+
+bash
+# Check version
+terraform version
+
+# Install on Ubuntu/WSL
+wget https://releases.hashicorp.com/terraform/1.9.0/terraform_1.9.0_linux_amd64.zip
+unzip terraform_1.9.0_linux_amd64.zip
+sudo mv terraform /usr/local/bin/
+AWS CLI: Version 2.x
+
+bash
+# Check version
+aws --version
+
+# Configure credentials
+aws configure
+Git: For version control
+
+bash
+git --version
+AWS Credentials
+Configure AWS credentials before running Terraform:
+
+bash
+aws configure
+
+# Enter:
+# AWS Access Key ID: YOUR_ACCESS_KEY
+# AWS Secret Access Key: YOUR_SECRET_KEY
+# Default region: ap-south-1
+# Default output format: json
+Verify credentials:
+
+bash
+aws sts get-caller-identity
+🚀 Quick Start
+Deploy Infrastructure (15 minutes)
+bash
+# 1. Navigate to development environment
 cd terraform/environments/dev
 
-# Initialize Terraform
+# 2. Initialize Terraform (downloads providers)
 terraform init
+
+# 3. Preview changes
+terraform plan
+
+# 4. Deploy infrastructure
+terraform apply
+
+# Type "yes" when prompted
+
+# 5. Save outputs
+terraform output > outputs.txt
+
+# 6. Get database credentials
+DB_SECRET_ARN=$(terraform output -raw db_password_secret_arn)
+aws secretsmanager get-secret-value \
+  --secret-id $DB_SECRET_ARN \
+  --region ap-south-1 \
+  --query SecretString \
+  --output text | jq > db-credentials.json
+Destroy Infrastructure (10 minutes)
+bash
+# Navigate to environment
+cd terraform/environments/dev
+
+# Destroy all resources
+terraform destroy
+
+# Type "yes" when prompted
+
+# Verify deletion
+aws rds describe-db-instances --region ap-south-1
+aws ec2 describe-vpcs --region ap-south-1
+📖 Detailed Usage
+Initialize Terraform
+bash
+cd terraform/environments/dev
+
+# Initialize (first time only)
+terraform init
+
+# Upgrade providers
+terraform init -upgrade
+Plan Changes
+bash
+# Preview what will be created/modified/destroyed
+terraform plan
+
+# Save plan to file
+terraform plan -out=tfplan
+
+# Apply saved plan
+terraform apply tfplan
+Apply Changes
+bash
+# Interactive apply (asks for confirmation)
+terraform apply
+
+# Auto-approve (skip confirmation - use with caution!)
+terraform apply -auto-approve
+
+# Apply specific resource only
+terraform apply -target=module.vpc
+View State
+bash
+# List all resources
+terraform state list
+
+# Show specific resource details
+terraform state show module.vpc.aws_vpc.main
+
+# View outputs
+terraform output
+
+# Get specific output value
+terraform output vpc_id
+terraform output -raw db_password_secret_arn
+Modify Infrastructure
+bash
+# Edit variables in variables.tf or terraform.tfvars
 
 # Preview changes
 terraform plan
 
-# Deploy infrastructure
+# Apply changes
 terraform apply
+Import Existing Resources
+bash
+# Import existing VPC
+terraform import module.vpc.aws_vpc.main vpc-xxxxxxxxx
 
-# Save outputs
-terraform output > outputs.txt
+# Import existing RDS instance
+terraform import module.rds.aws_db_instance.main sovereign-retirement-dev-postgres
+📊 Outputs
+After terraform apply, you'll get these outputs:
 
-# Get database connection details
-terraform output db_address
-terraform output db_password_secret_arn
-```
-
-
-### Step 2: Retrieve Database Credentials
-
-```bash
-# Get database password from Secrets Manager
+VPC Outputs
+bash
+vpc_id                  = "vpc-xxxxxxxxx"
+public_subnet_ids       = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]
+private_subnet_ids      = ["subnet-aaaaaaaa", "subnet-bbbbbbbb"]
+nat_gateway_id          = "nat-xxxxxxxxx"
+RDS Outputs
+bash
+db_instance_id          = "sovereign-retirement-dev-postgres"
+db_endpoint             = "sovereign-retirement-dev-postgres.xxxxxx.ap-south-1.rds.amazonaws.com:5432"
+db_address              = "sovereign-retirement-dev-postgres.xxxxxx.ap-south-1.rds.amazonaws.com"
+db_port                 = 5432
+db_name                 = "sovereign_db"
+db_password_secret_arn  = "arn:aws:secretsmanager:ap-south-1:xxxx:secret:sovereign-retirement-dev-db-password-xxxxx"
+Get Database Credentials
+bash
+# Retrieve from Secrets Manager
 DB_SECRET_ARN=$(terraform output -raw db_password_secret_arn)
 
 aws secretsmanager get-secret-value \
@@ -343,437 +398,274 @@ aws secretsmanager get-secret-value \
   --query SecretString \
   --output text | jq
 
-# Save credentials for application configuration
-```
+# Output:
+# {
+#   "username": "postgres",
+#   "password": "randomly-generated-password",
+#   "engine": "postgres",
+#   "host": "sovereign-retirement-dev-postgres.xxxxx.ap-south-1.rds.amazonaws.com",
+#   "port": 5432,
+#   "dbname": "sovereign_db"
+# }
+💰 Cost Estimation
+Development Environment (24/7)
+Resource	Type	Quantity	Cost/Month	Notes
+VPC	N/A	1	$0	Free
+Subnets	N/A	4	$0	Free
+Internet Gateway	N/A	1	$0	Free
+NAT Gateway	N/A	1	$32.40	$0.045/hour + data transfer
+RDS db.t3.micro	PostgreSQL 15	1	$15.30	Single-AZ, 20 GB storage
+Secrets Manager	Secret	1	$0.40	$0.40/secret/month
+CloudWatch Logs	Log storage	~1 GB	$0.50	First 5 GB free tier
+Data Transfer	Out to internet	~5 GB	$0.45	$0.09/GB (first 10 TB)
+Total			~$49/month	
+Cost Optimization Strategies
+Destroy when not using:
 
-
-### Step 3: Push Docker Images to ECR (Day 5 - PLANNED)
-
-```bash
-# Login to ECR
-aws ecr get-login-password --region ap-south-1 | \
-  docker login --username AWS --password-stdin \
-  YOUR-ACCOUNT-ID.dkr.ecr.ap-south-1.amazonaws.com
-
-# Build and push frontend
-docker build -t sovereign-retirement-frontend ./frontend
-docker tag sovereign-retirement-frontend:latest \
-  YOUR-ACCOUNT-ID.dkr.ecr.ap-south-1.amazonaws.com/sovereign-retirement-frontend:latest
-docker push YOUR-ACCOUNT-ID.dkr.ecr.ap-south-1.amazonaws.com/sovereign-retirement-frontend:latest
-
-# Build and push backend
-docker build -t sovereign-retirement-backend ./backend
-docker tag sovereign-retirement-backend:latest \
-  YOUR-ACCOUNT-ID.dkr.ecr.ap-south-1.amazonaws.com/sovereign-retirement-backend:latest
-docker push YOUR-ACCOUNT-ID.dkr.ecr.ap-south-1.amazonaws.com/sovereign-retirement-backend:latest
-```
-
-
-### Step 4: Deploy ECS Cluster (Day 6 - PLANNED)
-
-```bash
-# Apply ECS infrastructure
-cd terraform/environments/dev
-terraform apply
-
-# Verify deployment
-aws ecs list-clusters --region ap-south-1
-aws ecs list-services --cluster sovereign-retirement-dev --region ap-south-1
-```
-
-
-### Step 5: Configure Load Balancer (Day 7 - PLANNED)
-
-```bash
-# Get ALB DNS name
-terraform output alb_dns_name
-
-# Access application at:
-# http://YOUR-ALB-DNS-NAME.ap-south-1.elb.amazonaws.com
-```
-
-
-### Destroy Infrastructure (Save Costs)
-
-```bash
-# Destroy all AWS resources
-cd terraform/environments/dev
+bash
 terraform destroy
+# Cost: $0/month
+# Recreate in 15 minutes when needed
+Use Fargate Spot (Day 6):
 
-# Confirm by typing "yes"
-# All resources will be deleted, costs stop immediately
-```
-
-
----
-
-## 💰 Cost Analysis
-
-### Monthly Costs (if running 24/7)
-
-| Component | Instance Type | Cost/Month | Notes |
-| :-- | :-- | :-- | :-- |
-| **VPC** | N/A | \$0 | Free tier |
-| **NAT Gateway** | N/A | \$32.40 | \$0.045/hour + data transfer |
-| **RDS** | db.t3.micro | \$15.30 | 20 GB storage included |
-| **ECS Fargate** | 0.25 vCPU, 0.5 GB | \$10-15 | 2 tasks (frontend + backend) |
-| **ALB** | N/A | \$18.00 | \$0.025/hour + LCU charges |
-| **ECR** | N/A | \$0.10 | Per GB stored |
-| **Secrets Manager** | N/A | \$0.40 | Per secret/month |
-| **CloudWatch Logs** | N/A | \$2.00 | 5 GB ingestion |
-| **Data Transfer** | N/A | \$1-3 | Varies by usage |
-| **Total** |  | **~\$75-80/month** |  |
+70% cheaper than on-demand
 
-### Demo Mode (Recommended for Portfolio)
-
-**Strategy**: Destroy infrastructure when not actively demoing
+Good for non-critical workloads
 
+Single NAT Gateway:
 
-| Usage Pattern | Cost/Month | Details |
-| :-- | :-- | :-- |
-| **Deployed 2 hours/month** | ~\$5 | Recreate for demos only |
-| **Deployed 1 day/month** | ~\$10 | Weekend testing |
-| **Deployed 1 week/month** | ~\$20 | Extended development |
+Already using 1 NAT instead of 2
 
-### Cost Optimization Tips
+Saves $32/month per additional NAT
 
-1. **Destroy when not using**: `terraform destroy` (costs = \$0)
-2. **Use Fargate Spot**: 70% cheaper than on-demand
-3. **Single NAT Gateway**: Use one instead of two (save \$32/month)
-4. **RDS Reserved Instances**: 40% discount for 1-year commitment
-5. **CloudWatch Log retention**: Set to 7 days instead of indefinite
-6. **ECR Lifecycle policies**: Auto-delete old images
+RDS Reserved Instances:
 
----
+1-year commitment: 40% discount
 
-## 🔒 Security Best Practices
+3-year commitment: 60% discount
 
-### Implemented ✅
+Only for production
 
-1. **Network Isolation**
-    - Database in private subnets (no direct internet access)
-    - Multi-layer security with security groups and NACLs
-2. **Secrets Management**
-    - Database credentials in AWS Secrets Manager
-    - No hardcoded passwords in code
-    - Automatic secret rotation capability
-3. **Least Privilege IAM**
-    - IAM roles with minimal required permissions
-    - No AWS access keys in code
-4. **Encryption**
-    - RDS encryption at rest (AWS KMS)
-    - HTTPS/TLS for data in transit (when ALB configured)
-5. **Infrastructure as Code**
-    - Version controlled infrastructure
-    - Peer-reviewable changes
-    - Audit trail via Git commits
-6. **Container Security**
-    - Multi-stage Docker builds (smaller attack surface)
-    - Non-root user in containers
-    - Minimal base images
+CloudWatch Log Retention:
 
-### Planned Enhancements 🔄
+Set to 7 days instead of indefinite
 
-1. **Web Application Firewall (WAF)**
-    - DDoS protection
-    - SQL injection prevention
-    - Rate limiting
-2. **AWS Systems Manager Session Manager**
-    - Secure bastion access without SSH keys
-    - All sessions logged to CloudWatch
-3. **VPC Flow Logs**
-    - Network traffic monitoring
-    - Intrusion detection
-4. **AWS GuardDuty**
-    - Threat detection
-    - Anomaly monitoring
-5. **Certificate Manager (ACM)**
-    - Free SSL/TLS certificates
-    - Automatic renewal
+Reduces storage costs
 
----
-
-## 🎓 What I Learned
+Scheduled Scaling:
 
-### Cloud Architecture
+Stop RDS during nights/weekends
 
-- Designing multi-tier applications on AWS
-- Understanding VPC networking (subnets, routing, gateways)
-- High availability across multiple availability zones
-- Security through network isolation
+Can save 50-70% for dev environments
 
+🔧 Troubleshooting
+Common Issues
+1. "Error: No valid credential sources found"
+bash
+# Configure AWS credentials
+aws configure
 
-### Infrastructure as Code
+# Or set environment variables
+export AWS_ACCESS_KEY_ID="your-key"
+export AWS_SECRET_ACCESS_KEY="your-secret"
+export AWS_DEFAULT_REGION="ap-south-1"
+2. "Error: Provider version constraint not satisfied"
+bash
+# Upgrade Terraform
+terraform init -upgrade
+3. "Error: RDS instance already exists"
+bash
+# Import existing resource
+terraform import module.rds.aws_db_instance.main <instance-id>
 
-- Terraform basics: resources, modules, state management
-- Modular IaC for reusability and maintainability
-- Managing infrastructure lifecycle (plan, apply, destroy)
-- Version controlling infrastructure
+# Or destroy existing instance first (data loss!)
+aws rds delete-db-instance \
+  --db-instance-identifier sovereign-retirement-dev-postgres \
+  --skip-final-snapshot \
+  --region ap-south-1
+4. "Error: Insufficient capacity"
+bash
+# Change to different availability zone
+# Edit variables.tf:
+availability_zones = ["ap-south-1b", "ap-south-1c"]
+5. "Error: VPC limit exceeded"
+bash
+# Delete unused VPCs
+aws ec2 describe-vpcs --region ap-south-1
+aws ec2 delete-vpc --vpc-id vpc-xxxxx --region ap-south-1
 
+# Or request limit increase in AWS console
+6. "Error: State lock"
+bash
+# If Terraform crashed and left a lock
+terraform force-unlock <LOCK_ID>
 
-### Containerization
+# Find lock ID in error message
+🔐 Security Best Practices
+✅ Implemented
+No Hardcoded Secrets
 
-- Docker multi-stage builds for optimized images
-- Docker Compose for local development orchestration
-- Container networking and environment variables
-- Dockerfile best practices
+Database password generated randomly
 
+Stored in AWS Secrets Manager
 
-### AWS Services Deep Dive
+Never committed to Git
 
-- **VPC**: Subnets, route tables, internet/NAT gateways
-- **RDS**: Managed databases, backups, security groups
-- **Secrets Manager**: Secure credential storage and rotation
-- **IAM**: Roles, policies, and least privilege principles
-- **CloudWatch**: Monitoring and logging
+Private Subnets for Data
 
+RDS in private subnets only
 
-### DevOps Practices
+No direct internet access
 
-- Separating environments (dev, staging, prod)
-- Cost optimization strategies
-- Security best practices
-- Documentation and code organization
+Security Groups
 
----
+Restrictive inbound rules
 
-## 🚀 Future Improvements
+Only PostgreSQL port 5432
 
-### Short Term (Next 2 Weeks)
+Only from VPC CIDR
 
-- [ ] Complete Day 5: Push Docker images to ECR
-- [ ] Complete Day 6: Deploy ECS Fargate cluster
-- [ ] Complete Day 7: Configure Application Load Balancer
-- [ ] Add custom domain with Route53
-- [ ] Configure SSL/TLS with ACM
+IAM Roles
 
+Least privilege principle
 
-### Medium Term (1-2 Months)
+No AWS keys in code
 
-- [ ] Set up CI/CD pipeline with GitHub Actions
-- [ ] Add automated testing (unit, integration, e2e)
-- [ ] Implement blue-green deployment strategy
-- [ ] Add CloudWatch alarms and dashboards
-- [ ] Set up AWS Backup for automated backups
-- [ ] Add WAF for security protection
+State File Security
 
+.gitignore excludes *.tfstate
 
-### Long Term (3+ Months)
+Consider remote state (S3 + DynamoDB)
 
-- [ ] Multi-region deployment for disaster recovery
-- [ ] Add CloudFront CDN for global performance
-- [ ] Implement auto-scaling based on metrics
-- [ ] Add comprehensive monitoring with X-Ray
-- [ ] Set up centralized logging with OpenSearch
-- [ ] Migrate to Amazon Aurora for better performance
-- [ ] Add Redis/ElastiCache for caching
-- [ ] Implement GraphQL API
-- [ ] Add mobile app (React Native)
+🔄 Recommended Enhancements
+Remote State Backend:
 
----
+text
+terraform {
+  backend "s3" {
+    bucket         = "your-terraform-state"
+    key            = "sovereign-retirement/dev/terraform.tfstate"
+    region         = "ap-south-1"
+    encrypt        = true
+    dynamodb_table = "terraform-locks"
+  }
+}
+Enable VPC Flow Logs:
 
-## 📊 Current Status
+Monitor network traffic
 
-### Completed ✅
+Detect anomalies
 
-- **Day 1-2**: Full-stack application development
-    - Frontend with React + TypeScript
-    - Backend API with NestJS + TypeScript
-    - PostgreSQL database schema
-    - Authentication and authorization
-    - Retirement calculation logic
-- **Day 3**: Docker containerization
-    - Dockerfiles for frontend and backend
-    - Docker Compose orchestration
-    - Local development environment
-    - Multi-container networking
-- **Day 4**: AWS infrastructure foundation
-    - Custom VPC with public/private subnets
-    - RDS PostgreSQL database
-    - Security groups and IAM roles
-    - Secrets Manager integration
-    - Terraform modules (VPC, RDS)
+Enable AWS Config:
 
+Track configuration changes
 
-### In Progress 🔄
+Compliance monitoring
 
-- **Day 5**: Container registry setup
-- **Day 6**: Container orchestration with ECS
-- **Day 7**: Load balancing and public access
+Add WAF (Day 7):
 
----
+DDoS protection
 
-## 🤝 Contributing
+SQL injection prevention
 
-This is a personal learning project, but suggestions and feedback are welcome!
+📚 Additional Resources
+Terraform Documentation
+Terraform AWS Provider
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Terraform Modules
 
----
+Terraform State
 
-## 📝 License
+AWS Documentation
+VPC User Guide
 
-MIT License - feel free to use this project for learning purposes.
+RDS User Guide
 
----
+AWS Best Practices
 
-## 👤 Author
+Learning Resources
+HashiCorp Learn
 
-**Edward Santosh**
+Terraform Best Practices
 
-- GitHub: [@edwardjsi](https://github.com/edwardjsi)
+AWS Well-Architected Framework
 
----
+🎯 Next Steps
+Day 5: Add ECR module for container registry
 
-## 🙏 Acknowledgments
+Day 6: Add ECS module for container orchestration
 
-- AWS Documentation for best practices
-- Terraform Registry for module examples
-- NestJS and React communities
-- HashiCorp Learn tutorials
+Day 7: Add ALB module for load balancing
 
----
+Future: Add CI/CD pipeline with GitHub Actions
 
-## 📚 Resources
+📝 Changelog
+[2026-02-03] - Day 4
+Initial Terraform infrastructure
 
-### Documentation
+VPC module with public/private subnets
 
-- [AWS VPC Documentation](https://docs.aws.amazon.com/vpc/)
-- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [Docker Documentation](https://docs.docker.com/)
-- [NestJS Documentation](https://docs.nestjs.com/)
-- [React Documentation](https://react.dev/)
+RDS PostgreSQL module
 
+Security groups and IAM roles
 
-### Learning Resources
+Secrets Manager integration
 
-- [AWS Well-Architected Framework](https://aws.amazon.com/architecture/well-architected/)
-- [Terraform Best Practices](https://www.terraform-best-practices.com/)
-- [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
+Questions or issues? Check the main project README or open an issue.
 
----
-
-## ⚡ Quick Reference
-
-### Useful Commands
-
-```bash
-# Local Development
-docker-compose up -d              # Start all services
-docker-compose logs -f            # View logs
-docker-compose down               # Stop services
-
-# Terraform
-terraform init                    # Initialize
-terraform plan                    # Preview changes
-terraform apply                   # Deploy
-terraform destroy                 # Delete all
-terraform output                  # View outputs
-
-# AWS CLI
-aws rds describe-db-instances     # List databases
-aws ecs list-clusters             # List ECS clusters
-aws secretsmanager list-secrets   # List secrets
-
-# Git
-git status                        # Check status
-git add .                         # Stage changes
-git commit -m "message"           # Commit
-git push origin main              # Push to GitHub
-```
-
-
----
-
-**Built with ❤️ to demonstrate cloud engineering skills and Infrastructure as Code practices.**
-
-**Last Updated**: February 3, 2026
-**Project Status**: In Development (Day 4 Complete)
+Built with ❤️ using Terraform and AWS
 EOF
 
-```
+Verify it was created
+ls -la README.md
+
+View first few lines
+head -20 README.md
+
+text
 
 ***
 
-## 🎯 NOW ADD IT TO GIT
+## 📝 NOW COMMIT IT
 
 ```bash
-# Add the README
+# Add the new README
 git add README.md
 
-# Add everything else too
-git add -A
+# Commit
+git commit -m "docs: Add comprehensive Terraform documentation
 
-# Commit with all changes
-git commit -m "feat: Add comprehensive README and Day 4 infrastructure
-
-- Add detailed README.md with architecture, setup instructions, and cost analysis
-- Add AWS infrastructure with Terraform (VPC, RDS, Security Groups)
-- Add frontend dashboard, login, and register pages
-- Add Terraform documentation
-- Update .gitignore to exclude sensitive files
-
-Project demonstrates:
-- Full-stack TypeScript development
-- Docker containerization
-- Infrastructure as Code with Terraform
-- AWS cloud architecture
-- Security best practices"
+- Add detailed Terraform README with architecture diagrams
+- Document all modules (VPC, RDS) with inputs/outputs
+- Add deployment instructions and troubleshooting guide
+- Include cost estimation and optimization strategies
+- Document security best practices
+- Add usage examples and common commands"
 
 # Push to GitHub
 git push origin main
-```
+✅ WHAT THIS README INCLUDES
+For Recruiters:
 
+✅ Complete architecture diagrams (ASCII art)
 
-***
+✅ All modules explained in detail
 
-**This README includes:**
+✅ Input/output tables for each module
 
-- ✅ Complete project overview
-- ✅ Architecture diagrams (text-based)
-- ✅ All technologies used
-- ✅ Step-by-step deployment guide
-- ✅ Cost analysis with optimization tips
-- ✅ Security best practices
-- ✅ What you learned (for recruiters!)
-- ✅ Future improvements (shows forward thinking)
-- ✅ Professional formatting
+✅ Cost breakdown with optimization tips
 
-**Perfect for showing recruiters!** 🚀
+✅ Security best practices
 
-**Run those commands and you're done!** Tell me when it's pushed! 💪
-<span style="display:none">[^1][^10][^11][^12][^13][^2][^3][^4][^5][^6][^7][^8][^9]</span>
+For You:
 
-<div align="center">⁂</div>
+✅ Quick start commands
 
-[^1]: image.jpg
+✅ Troubleshooting guide
 
-[^2]: image.jpg
+✅ Common Terraform operations
 
-[^3]: image.jpg
+✅ AWS CLI integration examples
 
-[^4]: image.jpg
-
-[^5]: image.jpg
-
-[^6]: image.jpg
-
-[^7]: image.jpg
-
-[^8]: image.jpg
-
-[^9]: image.jpg
-
-[^10]: Retirement-Projection-Logic.txt
-
-[^11]: image.jpg
-
-[^12]: image.jpg
-
-[^13]: image.jpg
-
+✅ Next steps and roadmap
 
