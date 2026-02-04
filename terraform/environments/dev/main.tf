@@ -59,3 +59,34 @@ module "rds" {
   db_max_allocated_storage = var.db_max_allocated_storage
   backup_retention_period  = var.backup_retention_period
 }
+
+# ECR Repositories for Container Images
+module "ecr" {
+  source = "../../modules/ecr"
+
+  project_name = var.project_name
+  environment  = var.environment
+}
+
+# ECS Cluster and Services
+module "ecs" {
+  source = "../../modules/ecs"
+
+  project_name         = var.project_name
+  environment          = var.environment
+  vpc_id               = module.vpc.vpc_id
+  private_subnet_ids   = module.vpc.private_subnet_ids
+  db_security_group_id = module.rds.db_security_group_id
+
+  frontend_image_url = module.ecr.frontend_repository_url
+  backend_image_url  = module.ecr.backend_repository_url
+
+  db_address              = module.rds.db_instance_address
+  db_port                 = module.rds.db_instance_port
+  db_name                 = module.rds.db_name
+
+  db_username             = "postgres"
+  db_password_secret_arn  = module.rds.db_password_secret_arn
+
+  aws_region = var.aws_region
+}
